@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: website-build-script
+data:
+  build-script.sh: |
+    #!/bin/bash
+    apt-get update && apt-get install -y git wget tar
+    wget -qO- https://github.com/gohugoio/hugo/releases/download/v0.94.0/hugo_extended_0.94.0_Linux-64bit.tar.gz | tar xvz
+    mv hugo /usr/local/bin/
+    git clone --recursive https://github.com/chazapis/hy548.git
+    cd ./hy548
+    git submodule update --init --recursive
+    cd ./html
+    hugo -D
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ubuntu
+spec:
+  template:
+    spec:
+      volumes:
+      - name: script-volume
+        configMap:
+          name: website-build-script
+      restartPolicy: Never
+      containers:
+      - name: website-builder
+        image: ubuntu:20.04
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+        command: ["/bin/bash", "/scripts/build-script.sh"]
